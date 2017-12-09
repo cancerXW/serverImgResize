@@ -1,0 +1,47 @@
+<?php
+/**
+ * 服务器实时生成指定尺寸略缩图并缓存
+ */
+
+$s = $_GET['s'];
+$w = $_GET['w'];
+$h = $_GET['h'];
+$t = $_GET['t'];
+if ($s && $w && $h && $t) {
+    $source_file = __DIR__ . '/' . $s . '.' . $t;
+    $thumbnail_file = __DIR__ . '/thumbnail/' . $s . '_' . $w . 'x' . $h . '.' . $t;
+    if (is_file($source_file)) {
+        header('Content-type: image/' . $t);
+        if (is_file($thumbnail_file)) {
+            echo file_get_contents($thumbnail_file);
+        } else {
+            $imagick = new Imagick();
+            $imagick->readImage($source_file);
+            $_width = $imagick->getImageWidth();
+            $_height = $imagick->getImageHeight();
+            if ($w >= $_width || $h >= $_height) {
+                echo $imagick;
+            } else {
+                $imagick->stripImage();
+                $imagick->cropThumbnailImage($w, $h);
+                preg_match('(.*/)', $thumbnail_file, $r);
+                if (!is_dir($r[0])) {
+                    mkdir($r[0], 755, true);
+                }
+                $imagick->setImageCompressionQuality(40);
+                $result = $imagick->writeImage($thumbnail_file);
+                echo $imagick;
+            }
+            $imagick->clear();//清除相关资源
+            $imagick->destroy();//释放imagick对象
+        }
+    } else {
+        header("HTTP/1.0 404 Not Found");
+        header("status: 404");
+        echo "Not Found";
+    }
+}
+
+
+
+
